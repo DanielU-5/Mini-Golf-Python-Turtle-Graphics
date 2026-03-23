@@ -12,35 +12,49 @@ ball_colors = ["white", "red", "blue", "yellow", "orange"]
 # Each obstacle has a bottom-left corner position (x, y), width, and height.
 HOLES = [
     {
+        # Hole 1 - Par 3: simple intro, clear path with a few blocks
         "ball_start": (-300, 0),
         "hole_pos": (280, 0),
         "par": 3,
         "obstacles": [
-            {"pos": (-50, -30), "w": 100, "h": 60},
+            {"pos": (-50, -30),  "w": 100, "h": 60},
             {"pos": (120, -180), "w": 80,  "h": 60},
             {"pos": (-150, 100), "w": 80,  "h": 40},
         ],
     },
     {
-        "ball_start": (-300, -100),
-        "hole_pos": (280, 100),
+        # Hole 2 - Par 4: two long walls that funnel the ball into a narrow gap
+        "ball_start": (-300, 50),
+        "hole_pos": (280, -80),
         "par": 4,
         "obstacles": [
-            {"pos": (-100, -50),  "w": 20, "h": 200},
-            {"pos": (50,  -150),  "w": 20, "h": 180},
-            {"pos": (-20,  80),   "w": 120, "h": 20},
+            # Long top wall forcing ball low
+            {"pos": (-200, 80),   "w": 280, "h": 20},
+            # Long bottom wall forcing ball high
+            {"pos": (-50,  -200), "w": 250, "h": 20},
+            # Central blocker in the middle — must go around
+            {"pos": (30,   -60),  "w": 25,  "h": 160},
+            # Near-hole blocker
+            {"pos": (170,   20),  "w": 20,  "h": 120},
         ],
     },
     {
+        # Hole 3 - Par 5: maze-like layout, ball must weave through tight gaps
         "ball_start": (-300, 0),
         "hole_pos": (280, 0),
         "par": 5,
         "obstacles": [
-            {"pos": (-200, -80),  "w": 60,  "h": 60},
-            {"pos": (-50,  100),  "w": 60,  "h": 60},
-            {"pos": (80,  -120),  "w": 60,  "h": 60},
-            {"pos": (160,  60),   "w": 60,  "h": 60},
-            {"pos": (-120, -180), "w": 120, "h": 20},
+            # Left section — staggered walls creating a chicane
+            {"pos": (-220, -200), "w": 20, "h": 220},
+            {"pos": (-120,  -20), "w": 20, "h": 230},
+            # Mid section — island blocks to navigate around
+            {"pos": (-10,  -150), "w": 70,  "h": 70},
+            {"pos": (-10,   80),  "w": 70,  "h": 70},
+            # Right section — narrow corridor to the hole
+            {"pos": (120,  -200), "w": 20,  "h": 180},
+            {"pos": (120,   60),  "w": 20,  "h": 160},
+            # Final guard right in front of the hole
+            {"pos": (210,  -50),  "w": 20,  "h": 80},
         ],
     },
 ]
