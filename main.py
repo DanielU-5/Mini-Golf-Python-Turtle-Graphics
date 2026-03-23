@@ -3,203 +3,445 @@ import time
 import math
 import random
 
+##########
+# CONSTANTS
+##########
+ball_colors = ["white", "red", "blue", "yellow", "orange"]
+
+# Each hole defines: ball start, hole position, par, and a list of obstacles.
+# Each obstacle has a bottom-left corner position (x, y), width, and height.
+HOLES = [
+    {
+        "ball_start": (-300, 0),
+        "hole_pos": (280, 0),
+        "par": 3,
+        "obstacles": [
+            {"pos": (-50, -30), "w": 100, "h": 60},
+            {"pos": (120, -180), "w": 80,  "h": 60},
+            {"pos": (-150, 100), "w": 80,  "h": 40},
+        ],
+    },
+    {
+        "ball_start": (-300, -100),
+        "hole_pos": (280, 100),
+        "par": 4,
+        "obstacles": [
+            {"pos": (-100, -50),  "w": 20, "h": 200},
+            {"pos": (50,  -150),  "w": 20, "h": 180},
+            {"pos": (-20,  80),   "w": 120, "h": 20},
+        ],
+    },
+    {
+        "ball_start": (-300, 0),
+        "hole_pos": (280, 0),
+        "par": 5,
+        "obstacles": [
+            {"pos": (-200, -80),  "w": 60,  "h": 60},
+            {"pos": (-50,  100),  "w": 60,  "h": 60},
+            {"pos": (80,  -120),  "w": 60,  "h": 60},
+            {"pos": (160,  60),   "w": 60,  "h": 60},
+            {"pos": (-120, -180), "w": 120, "h": 20},
+        ],
+    },
+]
 
 ##########
-#CONSTANTS
+# GAME STATE
 ##########
-HOLE_X = 200
-HOLE_Y = 0
-BALLSTART_X = -300
-BALLSTART_Y = 0
-
-
 dx = 0
 dy = 0
 strokes = 0
+current_hole = 0
+total_strokes = 0
+game_over = False
+obstacle_turtles = []
 
-ball_colors = ["white", "red", "blue", "yellow", "orange"]
+##########
+# SCREEN SETUP
+##########
 screen = turtle.Screen()
-screen.setup(830,630)
+screen.setup(830, 630)
 screen.title("Mini Golf")
 screen.bgcolor("green")
+screen.tracer(0)   # We'll call screen.update() manually for smooth animation
 
+##########
+# PERSISTENT TURTLES (reused across holes)
+##########
+
+# Fairway background
+fairway = turtle.Turtle()
+fairway.hideturtle()
+fairway.speed(0)
+
+# Border
+border = turtle.Turtle()
+border.hideturtle()
+border.speed(0)
+
+# Hole (black ring + white fill)
+outer_hole = turtle.Turtle()
+outer_hole.hideturtle()
+outer_hole.speed(0)
+
+inner_hole = turtle.Turtle()
+inner_hole.hideturtle()
+inner_hole.speed(0)
+
+# Ball
 ball = turtle.Turtle()
 ball.shape("circle")
-ball.color(random.choice(ball_colors))
+ball.speed(0)
 ball.pu()
-ball.goto(BALLSTART_X, BALLSTART_Y)
 
-outerhole = turtle.Turtle()
-outerhole.hideturtle()
-outerhole.pu()
-outerhole.goto(200,0)
-outerhole.dot(37, "black")
+# Score / HUD
+score_turtle = turtle.Turtle()
+score_turtle.hideturtle()
+score_turtle.speed(0)
+score_turtle.pu()
+score_turtle.color("white")
 
-hole = turtle.Turtle()
-hole.hideturtle()
-hole.pu()
-hole.goto(200,0)
-hole.dot(30, "white")
+# Hole number display
+hole_label = turtle.Turtle()
+hole_label.hideturtle()
+hole_label.speed(0)
+hole_label.pu()
+hole_label.color("white")
 
-score = turtle.Turtle()
-score.hideturtle()
-score.pu()
-score.goto(-380, 240)
-score.color("white")
-score.write("Strokes: 0 \nPress 'r' to reset", font=("Arial", 14, "normal"))
 
-outline = turtle.Turtle()
-outline.hideturtle()
-outline.pu()
-outline.speed(0)
-outline.pensize(15)
-outline.goto(-400, 300)
-outline.color("blue")
-outline.pd()
-outline.setheading(0)
-for x in range(2):
-    outline.fd(800)
-    outline.right(90)
-    outline.fd(600)
-    outline.right(90)
+##########
+# DRAWING HELPERS
+##########
 
-obstacle1 = turtle.Turtle()
-obstacle1.hideturtle()
-obstacle1.pu()
-obstacle1.color("blue")
-obstacle1.goto(-50, -30)
-obstacle1.pd()
-obstacle1.speed(0)
-obstacle1.begin_fill()
-for x in range(2):
-    obstacle1.fd(100)
-    obstacle1.left(90)
-    obstacle1.fd(60)
-    obstacle1.left(90)
-obstacle1.end_fill()
+def draw_fairway():
+    fairway.clear()
+    fairway.pu()
+    fairway.goto(-375, 275)
+    fairway.color("#2d8a2d")
+    fairway.begin_fill()
+    for _ in range(2):
+        fairway.fd(750)
+        fairway.right(90)
+        fairway.fd(550)
+        fairway.right(90)
+    fairway.end_fill()
 
-obstacle2 = turtle.Turtle()
-obstacle2.hideturtle()
-obstacle2.pu()
-obstacle2.color("blue")
-obstacle2.goto(120, -180)
-obstacle2.pd()
-obstacle2.speed(0)
-obstacle2.begin_fill()
-for x in range(2):
-    obstacle2.fd(80)
-    obstacle2.left(90)
-    obstacle2.fd(60)
-    obstacle2.left(90)
-obstacle2.end_fill()
 
-obstacle3 = turtle.Turtle()
-obstacle3.hideturtle()
-obstacle3.pu()
-obstacle3.color("blue")
-obstacle3.goto(-150, 100)
-obstacle3.pd()
-obstacle3.speed(0)
-obstacle3.begin_fill()
-for x in range(2):
-    obstacle3.fd(80)
-    obstacle3.left(90)
-    obstacle3.fd(40)
-    obstacle3.left(90)
-obstacle3.end_fill()
+def draw_border():
+    border.clear()
+    border.pu()
+    border.pensize(12)
+    border.color("#1a5c9e")
+    border.goto(-400, 300)
+    border.pd()
+    border.setheading(0)
+    for _ in range(2):
+        border.fd(800)
+        border.right(90)
+        border.fd(600)
+        border.right(90)
+    border.pu()
 
-def reset():
-    global dx, dy, strokes
 
+def draw_hole(hx, hy):
+    outer_hole.clear()
+    outer_hole.pu()
+    outer_hole.goto(hx, hy)
+    outer_hole.dot(38, "black")
+
+    inner_hole.clear()
+    inner_hole.pu()
+    inner_hole.goto(hx, hy)
+    inner_hole.dot(28, "#111111")
+
+    # Small flag pin
+    inner_hole.goto(hx, hy)
+    inner_hole.pd()
+    inner_hole.color("white")
+    inner_hole.pensize(2)
+    inner_hole.setheading(90)
+    inner_hole.fd(30)
+    # Flag triangle
+    inner_hole.color("red")
+    inner_hole.begin_fill()
+    inner_hole.setheading(0)
+    inner_hole.fd(18)
+    inner_hole.setheading(270)
+    inner_hole.fd(12)
+    inner_hole.setheading(180)
+    inner_hole.fd(18)
+    inner_hole.end_fill()
+    inner_hole.pu()
+
+
+def draw_obstacle(t, ox, oy, w, h):
+    t.clear()
+    t.pu()
+    t.goto(ox, oy)
+    t.color("#1a5c9e")
+    t.pd()
+    t.begin_fill()
+    for _ in range(2):
+        t.fd(w)
+        t.left(90)
+        t.fd(h)
+        t.left(90)
+    t.end_fill()
+    # Highlight edge
+    t.pu()
+    t.goto(ox, oy)
+    t.color("#4a8ecf")
+    t.pensize(2)
+    t.pd()
+    for _ in range(2):
+        t.fd(w)
+        t.left(90)
+        t.fd(h)
+        t.left(90)
+    t.pu()
+
+
+def draw_hud():
+    score_turtle.clear()
+    score_turtle.goto(-380, 240)
+    par = HOLES[current_hole]["par"]
+    diff = total_strokes + strokes - sum(h["par"] for h in HOLES[:current_hole])
+    diff_str = f"+{diff}" if diff > 0 else str(diff) if diff < 0 else "E"
+    score_turtle.write(
+        f"Hole: {current_hole + 1}/{len(HOLES)}  Strokes: {strokes}  Par: {par}\n"
+        f"Total: {total_strokes + strokes} ({diff_str})  |  Press 'r' to reset",
+        font=("Arial", 13, "normal")
+    )
+
+    hole_label.clear()
+    hole_label.goto(300, 240)
+    hole_label.write(f"Hole {current_hole + 1}", align="center", font=("Arial", 16, "bold"))
+
+
+##########
+# LEVEL LOADER
+##########
+
+def load_hole(hole_index):
+    global dx, dy, strokes, current_hole, obstacle_turtles, game_over
+
+    game_over = False
     dx = 0
     dy = 0
     strokes = 0
+    current_hole = hole_index
+    hole_data = HOLES[hole_index]
 
-    ball.goto(BALLSTART_X, BALLSTART_Y)
-    score.clear()
-    score.goto(-380, 240)
-    score.write("Strokes: 0 \nPress 'r' to reset", font=("Arial", 14, "normal"))
-    main()
-screen.listen()
-screen.onkey(reset, "r")
+    bx, by = hole_data["ball_start"]
+    hx, hy = hole_data["hole_pos"]
 
-def stroke_message():
-    return f"Strokes: {strokes} \nPress 'r' to reset"
+    # Clear old obstacle turtles
+    for t in obstacle_turtles:
+        t.clear()
+        t.hideturtle()
+    obstacle_turtles = []
+
+    # Draw scene layers (order matters!)
+    draw_fairway()
+    draw_border()
+    draw_hole(hx, hy)
+
+    # Draw obstacles
+    for obs in hole_data["obstacles"]:
+        t = turtle.Turtle()
+        t.hideturtle()
+        t.speed(0)
+        t.pu()
+        draw_obstacle(t, obs["pos"][0], obs["pos"][1], obs["w"], obs["h"])
+        obstacle_turtles.append(t)
+
+    # Place ball
+    ball.color(random.choice(ball_colors))
+    ball.goto(bx, by)
+
+    draw_hud()
+    screen.update()
+
+
+##########
+# INPUT HANDLERS
+##########
 
 def hit(x, y):
     global dx, dy, strokes
+    if game_over:
+        return
     if abs(dx) > 0.1 or abs(dy) > 0.1:
-         return
+        return   # Ball still moving
 
     dx = (x - ball.xcor()) / 65
     dy = (y - ball.ycor()) / 65
     strokes += 1
-    score.clear()
-    score.write(stroke_message(), font=("Arial", 14, "normal"))
+    draw_hud()
+
+
+def reset():
+    global total_strokes, current_hole
+    total_strokes = 0
+    current_hole = 0
+    load_hole(0)
+    main_loop()
+
+
+screen.listen()
+screen.onkey(reset, "r")
 screen.onclick(hit)
 
-def main():
-    global dx, dy, strokes, ball
-    ball.color(random.choice(ball_colors))
+
+##########
+# END SCREENS
+##########
+
+def show_win_screen():
+    score_turtle.clear()
+    hole_label.clear()
+
+    par_total = sum(h["par"] for h in HOLES)
+    diff = total_strokes - par_total
+    if diff < 0:
+        diff_str = f"{diff} (Under par! 🏆)"
+    elif diff == 0:
+        diff_str = "Even par"
+    else:
+        diff_str = f"+{diff} (Over par)"
+
+    msg_t = turtle.Turtle()
+    msg_t.hideturtle()
+    msg_t.pu()
+    msg_t.color("white")
+    msg_t.goto(0, 60)
+    msg_t.write("🏌️ COURSE COMPLETE! 🏌️", align="center", font=("Arial", 28, "bold"))
+    msg_t.goto(0, 10)
+    msg_t.write(f"Total strokes: {total_strokes}  |  Par: {par_total}", align="center", font=("Arial", 18, "normal"))
+    msg_t.goto(0, -30)
+    msg_t.write(diff_str, align="center", font=("Arial", 18, "normal"))
+    msg_t.goto(0, -80)
+    msg_t.write("Press 'r' to play again", align="center", font=("Arial", 14, "normal"))
+    screen.update()
+
+
+def show_hole_complete():
+    """Flash a brief 'hole complete' message before loading next hole."""
+    score_turtle.clear()
+    msg_t = turtle.Turtle()
+    msg_t.hideturtle()
+    msg_t.pu()
+    msg_t.color("white")
+    msg_t.goto(0, 0)
+    msg_t.write(
+        f"Hole {current_hole + 1} complete!  Strokes: {strokes}",
+        align="center", font=("Arial", 22, "bold")
+    )
+    screen.update()
+    time.sleep(1.8)
+    msg_t.clear()
+
+
+def show_too_many_strokes():
+    score_turtle.clear()
+    hole_label.clear()
+    msg_t = turtle.Turtle()
+    msg_t.hideturtle()
+    msg_t.pu()
+    msg_t.color("white")
+    msg_t.goto(0, 20)
+    msg_t.write("Too many strokes! 😬", align="center", font=("Arial", 26, "bold"))
+    msg_t.goto(0, -30)
+    msg_t.write("Press 'r' to try again", align="center", font=("Arial", 16, "normal"))
+    screen.update()
+
+
+##########
+# MAIN GAME LOOP
+##########
+
+def main_loop():
+    global dx, dy, strokes, total_strokes, game_over
+
+    hole_data = HOLES[current_hole]
+    hx, hy = hole_data["hole_pos"]
+    max_strokes = hole_data["par"] + 5   # Generous limit per hole
+
     while True:
         x = ball.xcor()
         y = ball.ycor()
 
-        #Check for walls
-        if x > 380 or x < -380:
-            dx = -dx
-        if y > 280 or y < -280:
-            dy = -dy
-        #obstacle bounds
-        left1 = -50
-        right1 = 50
-        bottom1 = -30
-        top1 = 30
+        # --- Wall collisions ---
+        if x > 375 or x < -375:
+            dx = -dx * 0.85
+        if y > 270 or y < -270:
+            dy = -dy * 0.85
 
-        left2 = 120
-        right2 = 200
-        bottom2 = -180
-        top2 = -120
+        # --- Obstacle collisions ---
+        for obs in hole_data["obstacles"]:
+            ox, oy = obs["pos"]
+            ow, oh = obs["w"], obs["h"]
+            # Expand bounds slightly for smoother feel
+            if (ox - 5) < x < (ox + ow + 5) and (oy - 5) < y < (oy + oh + 5):
+                # Determine which axis to bounce on
+                overlap_left   = x - ox
+                overlap_right  = (ox + ow) - x
+                overlap_bottom = y - oy
+                overlap_top    = (oy + oh) - y
+                min_overlap = min(overlap_left, overlap_right, overlap_bottom, overlap_top)
+                if min_overlap in (overlap_left, overlap_right):
+                    dx = -dx * 0.85
+                else:
+                    dy = -dy * 0.85
 
-        left3 = -150
-        right3 = -70
-        bottom3 = 100
-        top3 = 140
-        #check if it hits obstacles
-        if left1 < x < right1 and bottom1 < y < top1:
-            dx = -dx
-            dy = -dy
-        if left2 < x < right2 and bottom2 < y < top2:
-            dx = -dx
-            dy = -dy
-        if left3 < x < right3 and bottom3 < y < top3:
-            dx = -dx
-            dy = -dy
-        #Move ball
+        # --- Move ball ---
         ball.goto(x + dx, y + dy)
-        #Slow down ball (friction)
-        dx *= 0.99
-        dy *= 0.99
 
-        #check if the ball is in the hole
-        if math.dist((ball.xcor(), ball.ycor()), (200, 0)) < 10:
-            print("YOU WIN!")
+        # --- Friction ---
+        dx *= 0.985
+        dy *= 0.985
+
+        # Stop tiny drift
+        if abs(dx) < 0.05:
+            dx = 0
+        if abs(dy) < 0.05:
+            dy = 0
+
+        screen.update()
+
+        # --- Win condition: ball in hole ---
+        if math.dist((ball.xcor(), ball.ycor()), (hx, hy)) < 13:
             dx = 0
             dy = 0
-            score.goto(0,0)
-            score.write(f"You made it in {strokes} strokes!", align ="center", font=("Arial", 25, "normal"))
-            break
-        elif strokes > 20:
-            print("You lose! Too many strokes!")
+            ball.goto(hx, hy)
+            screen.update()
+            total_strokes += strokes
+
+            if current_hole + 1 < len(HOLES):
+                show_hole_complete()
+                load_hole(current_hole + 1)
+                # Restart the loop for the new hole
+                main_loop()
+                return
+            else:
+                show_win_screen()
+                game_over = True
+                return
+
+        # --- Lose condition: too many strokes ---
+        elif strokes >= max_strokes and abs(dx) < 0.05 and abs(dy) < 0.05:
             dx = 0
             dy = 0
-            score.goto(0, 0)
-            score.write(f"You lose! Too many strokes!", align="center", font=("Arial", 25, "normal"))
-            break
-        else:
-            pass
+            show_too_many_strokes()
+            game_over = True
+            return
 
-    time.sleep(0.001)
+        time.sleep(0.008)
 
-main()
+
+##########
+# START
+##########
+load_hole(0)
+main_loop()
 screen.mainloop()
