@@ -440,8 +440,91 @@ def main_loop():
 
 
 ##########
+# MENU
+##########
+
+def show_menu():
+    menu_turtles = []
+
+    def make(color="white"):
+        t = turtle.Turtle()
+        t.hideturtle()
+        t.pu()
+        t.color(color)
+        t.speed(0)
+        menu_turtles.append(t)
+        return t
+
+    # Background
+    bg = make("#1a5c1a")
+    bg.goto(-375, 275)
+    bg.begin_fill()
+    for _ in range(2):
+        bg.fd(750)
+        bg.right(90)
+        bg.fd(550)
+        bg.right(90)
+    bg.end_fill()
+
+    # Border
+    brd = make("#1a5c9e")
+    brd.pensize(12)
+    brd.goto(-400, 300)
+    brd.pd()
+    for _ in range(2):
+        brd.fd(800)
+        brd.right(90)
+        brd.fd(600)
+        brd.right(90)
+    brd.pu()
+
+    # Title
+    t1 = make("white")
+    t1.goto(0, 130)
+    t1.write("MINI GOLF", align="center", font=("Arial", 48, "bold"))
+
+    t2 = make("#ccffcc")
+    t2.goto(0, 70)
+    t2.write("3 Holes  -  How few strokes can you take?", align="center", font=("Arial", 16, "normal"))
+
+    # Hole previews
+    t3 = make("white")
+    t3.goto(0, 10)
+    t3.write("Hole 1: Par 3    Hole 2: Par 4    Hole 3: Par 5", align="center", font=("Arial", 14, "normal"))
+
+    # Start prompt
+    t4 = make("yellow")
+    t4.goto(0, -80)
+    t4.write("Press  SPACE  or  click  to start", align="center", font=("Arial", 20, "bold"))
+
+    # Controls reminder
+    t5 = make("#aaaaaa")
+    t5.goto(0, -140)
+    t5.write("Click anywhere to aim & shoot  -  Press 'r' to reset", align="center", font=("Arial", 13, "normal"))
+
+    screen.update()
+
+    started = [False]
+
+    def start_game():
+        if started[0]:
+            return
+        started[0] = True
+        for t in menu_turtles:
+            t.clear()
+        screen.onclick(None)
+        screen.onkey(None, "space")
+        screen.onclick(hit)
+        load_hole(0)
+        main_loop()
+
+    screen.listen()
+    screen.onclick(lambda x, y: start_game())
+    screen.onkey(start_game, "space")
+
+
+##########
 # START
 ##########
-load_hole(0)
-main_loop()
+show_menu()
 screen.mainloop()
