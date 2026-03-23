@@ -17,7 +17,7 @@ A mini golf game built with Python's turtle graphics module. Click to aim and sh
 ## 🕹️ Features
 
 - 3-hole course with increasing difficulty (Par 3 → Par 4 → Par 5)
-- Running score tracker across all holes with a vs-par display (e.g. +2, E, -1)
+- Running score tracker across all holes with a vs-par display
 - Realistic-feeling physics with friction and energy-losing bounces
 - Smart obstacle collision that detects which face was hit
 - Flag marker on every hole
