@@ -62,7 +62,7 @@ README.md
 
 ## 🛠️ Customization
 
-Want to add your own holes? Each hole is just a dictionary in the `HOLES` list at the top of `mini_golf.py`:
+How do I add my own holes? Each hole is just a dictionary in the `HOLES` list at the top of `mini_golf.py`:
 
 ```python
 {
